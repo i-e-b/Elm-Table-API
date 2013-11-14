@@ -2,6 +2,7 @@ import Window
 import Http
 import JavaScript.Experimental as JS
 import Json
+import Dict
 
 divisions : [Float] -> Int -> [Int]
 divisions percents size = 
@@ -41,6 +42,22 @@ batchRequest : a -> Http.Request String
 batchRequest x = Http.get
   "http://prod-jester-web00.nix.sys.7d/file-notification-api/batches?format=json"
 
+
+type Batch = {receivedDate:String, isCompleted:Bool, batchId:String}
+
+jsonToBatch : Json.JsonValue -> [Batch]
+jsonToBatch jv =
+  let all = array jv
+      vals = map (\x -> object x) all
+      empty = Json.String ""
+      mapper d = 
+        {receivedDate = string (Dict.findWithDefault empty "ReceivedDate" d)
+        , batchId = ""
+        , isCompleted = False
+        }
+  in map (mapper) (vals)
+      
+
 maybeRecord : Maybe Json.JsonValue -> Maybe a
 maybeRecord jsonVal = 
   case jsonVal of 
@@ -52,4 +69,16 @@ toJson response =
     case response of
       Http.Success str -> maybeRecord (Json.fromString str)
       _ -> Nothing
+
+string : Json.JsonValue -> String
+string v = case v of { Json.String s -> s ; _ -> "" }
+
+boolean : Json.JsonValue -> Bool
+boolean v = case v of { Json.Boolean b -> b ; _ -> False }
+
+array : Json.JsonValue -> [Json.JsonValue]
+array v = case v of {Json.Array a -> a ; _ -> [] }
+
+object : Json.JsonValue -> Dict.Dict String Json.JsonValue
+object v = case v of { Json.Object o -> o ; _ -> Dict.empty }
 
