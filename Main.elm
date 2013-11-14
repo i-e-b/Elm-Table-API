@@ -31,16 +31,18 @@ exampleTable w = [exampleRow w, exampleRow w, exampleRow w, exampleRow w]
 --main = flow down <~ (exampleTable <~ Window.width)
 main = asText <~ dataJson
 
-dataJson = toJson <~ dataSignal
+dataJson : Signal (Maybe Json.JsonValue)
+dataJson = lift toJson (dataSignal (every (5*second)))
 
-dataSignal = Http.send (constant batchRequest)
+dataSignal : Signal a -> Signal (Http.Response String)
+dataSignal t = Http.send (lift batchRequest t)
 
 
--- The standard parts of a Flickr API request.
-batchRequest = Http.get
+batchRequest x = Http.get
   "http://prod-jester-web00.nix.sys.7d/file-notification-api/batches?format=json"
 
 
+toJson : Http.Response String -> Maybe Json.JsonValue
 toJson response =
     case response of
       Http.Success str -> Json.fromString str
