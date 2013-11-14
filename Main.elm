@@ -37,14 +37,19 @@ dataJson = lift toJson (dataSignal (every (5*second)))
 dataSignal : Signal a -> Signal (Http.Response String)
 dataSignal t = Http.send (lift batchRequest t)
 
-
+batchRequest : a -> Http.Request String
 batchRequest x = Http.get
   "http://prod-jester-web00.nix.sys.7d/file-notification-api/batches?format=json"
 
+maybeRecord : Maybe Json.JsonValue -> Maybe a
+maybeRecord jsonVal = 
+  case jsonVal of 
+    Just jn -> Just (JS.toRecord ( Json.toJSObject jn))
+    _ -> Nothing
 
-toJson : Http.Response String -> Maybe Json.JsonValue
+toJson : Http.Response String -> Maybe a
 toJson response =
     case response of
-      Http.Success str -> Json.fromString str
+      Http.Success str -> maybeRecord (Json.fromString str)
       _ -> Nothing
 
