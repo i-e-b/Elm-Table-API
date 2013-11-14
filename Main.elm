@@ -1,4 +1,7 @@
 import Window
+import Http
+import JavaScript.Experimental as JS
+import Json
 
 divisions : [Float] -> Int -> [Int]
 divisions percents size = 
@@ -14,11 +17,32 @@ makeRow elements widths =
 
 
 exampleElements = map (plainText) ["One", "Two", "Three", "Four"]
-exampleWidths = divisions [0.5, 0.1, 0.2, 0.3] <~ Window.width
+exampleWidths w = divisions [0.5, 0.1, 0.2, 0.3] w
 
-exampleRow =
-  let sizedElements = (makeRow exampleElements) <~ (exampleWidths)
-  in flow right <~ sizedElements
+exampleRow w =
+  let sizedElements = (makeRow exampleElements) (exampleWidths w)
+  in flow right sizedElements
 
 
-main = flow down <~ (combine [exampleRow, exampleRow, exampleRow, exampleRow])
+-- this one would be data source -> width -> [Element]
+exampleTable w = [exampleRow w, exampleRow w, exampleRow w, exampleRow w]
+
+
+--main = flow down <~ (exampleTable <~ Window.width)
+main = asText <~ dataJson
+
+dataJson = toJson <~ dataSignal
+
+dataSignal = Http.send (constant batchRequest)
+
+
+-- The standard parts of a Flickr API request.
+batchRequest = Http.get
+  "http://prod-jester-web00.nix.sys.7d/file-notification-api/batches?format=json"
+
+
+toJson response =
+    case response of
+      Http.Success str -> Json.fromString str
+      _ -> Nothing
+
