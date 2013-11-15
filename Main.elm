@@ -24,14 +24,23 @@ exampleRow w =
   let sizedElements = (makeRow exampleElements) (exampleWidths w)
   in flow right sizedElements
 
+type Cell = 
+    { proportion:Float {- size relative to total width 0..1 -}
+    , minSize:Int {- minimum width in pixels -}
+    , content:Element {- thing to display in cell -}
+    }
+type Row = [Cell]
+type Table = [Row]
 
 -- this one would be data source -> width -> [Element]
 exampleTable w = [exampleRow w, exampleRow w, exampleRow w, exampleRow w]
 
+-- TODO: (rec -> [cell]) -> [rec] -> table
+
 
 --main = flow down <~ (exampleTable <~ Window.width)
 --main = asText <~ ((orEmpty jsonToBatch) <~ dataJson)
-main = asText <~ {-(orEmpty jsonToBatch <~-} dataJson (every (5*second)){-)-}
+main = asText <~ (orEmpty jsonToBatch <~ dataJson (every (5*second)))
 
 dataJson : Signal a -> Signal (Maybe Json.JsonValue)
 dataJson s = lift toJson (dataSignal s)
