@@ -4,6 +4,29 @@ import JavaScript.Experimental as JS
 import Json
 import Dict
 
+
+--main = flow down <~ (exampleTable <~ Window.width)
+--main = asText <~ ((orEmpty jsonToBatch) <~ dataJson)
+--main = asText <~ (orEmpty jsonToBatch <~ dataJson (every (5*second)))
+
+batchFeed = orEmpty jsonToBatch <~ dataJson (every (5*second))
+main = lift2 batchesToElement(batchFeed) (Window.width)
+
+batchesToElement : [Batch] -> Int -> Element
+batchesToElement bs width = tableElement (batchTable bs) width
+
+-- ############## Tables from records ##################
+
+type Cell = 
+    { proportion:Float {- size relative to total width 0..1 -}
+    , minSize:Int {- minimum width in pixels -}
+    , content:Element {- thing to display in cell -}
+    }
+type Row = [Cell]
+type Table = [Row]
+
+-- given a list of proportions and an overall width
+-- return a list of sub-widths
 divisions : [Float] -> Int -> [Int]
 divisions percents size = 
   let x s = map (\f -> round(f * (toFloat s))) percents
@@ -24,23 +47,33 @@ exampleRow w =
   let sizedElements = (makeRow exampleElements) (exampleWidths w)
   in flow right sizedElements
 
-type Cell = 
-    { proportion:Float {- size relative to total width 0..1 -}
-    , minSize:Int {- minimum width in pixels -}
-    , content:Element {- thing to display in cell -}
-    }
-type Row = [Cell]
-type Table = [Row]
-
 -- this one would be data source -> width -> [Element]
 exampleTable w = [exampleRow w, exampleRow w, exampleRow w, exampleRow w]
 
--- TODO: (rec -> [cell]) -> [rec] -> table
+-- given a function that builds cells from records, and a list of 
+-- records, build a table
+tabulateRecords : (a -> [Cell]) -> [a] -> Table
+tabulateRecords f recs = map (f) recs
 
+-- todo: proportions and minimum sizes
+buildRow : Int -> [Cell] -> Element
+buildRow width r = flow right (map (\x -> x.content) r)
 
---main = flow down <~ (exampleTable <~ Window.width)
---main = asText <~ ((orEmpty jsonToBatch) <~ dataJson)
-main = asText <~ (orEmpty jsonToBatch <~ dataJson (every (5*second)))
+-- Turn table data into a displayable 
+tableElement : Table -> Int -> Element
+tableElement t width = 
+    let rows = map (buildRow width) t
+    in  flow down rows
+
+-- ############# API to table #################
+
+batchTable : [Batch] -> Table
+batchTable bs =
+    let cl s = {proportion=1.0, minSize=10, content=plainText s}
+        batchRow b = [cl "received date", cl "complete", cl "batchId"]
+    in  map (batchRow) bs
+
+-- ############# API crap #####################
 
 dataJson : Signal a -> Signal (Maybe Json.JsonValue)
 dataJson s = lift toJson (dataSignal s)
