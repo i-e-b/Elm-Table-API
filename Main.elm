@@ -30,30 +30,38 @@ exampleTable w = [exampleRow w, exampleRow w, exampleRow w, exampleRow w]
 
 
 --main = flow down <~ (exampleTable <~ Window.width)
-main = asText <~ dataJson
+--main = asText <~ ((orEmpty jsonToBatch) <~ dataJson)
+main = asText <~ {-(orEmpty jsonToBatch <~-} dataJson (every (5*second)){-)-}
 
-dataJson : Signal (Maybe Json.JsonValue)
-dataJson = lift toJson (dataSignal (every (5*second)))
+dataJson : Signal a -> Signal (Maybe Json.JsonValue)
+dataJson s = lift toJson (dataSignal s)
 
 dataSignal : Signal a -> Signal (Http.Response String)
 dataSignal t = Http.send (lift batchRequest t)
 
 batchRequest : a -> Http.Request String
 batchRequest x = Http.get
-  "http://prod-jester-web00.nix.sys.7d/file-notification-api/batches?format=json"
+    ("http://localhost:8000/sample.json?q=" ++ (show x))
+--  "http://prod-jester-web00.nix.sys.7d/file-notification-api/batches?format=json"
 
 
 type Batch = {receivedDate:String, isCompleted:Bool, batchId:String}
+
+orEmpty : (a -> [b]) -> Maybe a -> [b]
+orEmpty f ma = case ma of
+    Just ja -> f ja
+    Nothing -> []
 
 jsonToBatch : Json.JsonValue -> [Batch]
 jsonToBatch jv =
   let all = array jv
       vals = map (\x -> object x) all
       empty = Json.String ""
+      false = Json.Boolean False
       mapper d = 
         {receivedDate = string (Dict.findWithDefault empty "ReceivedDate" d)
-        , batchId = ""
-        , isCompleted = False
+        , batchId = string (Dict.findWithDefault empty "BatchId" d)
+        , isCompleted = boolean (Dict.findWithDefault false "IsCompleted" d)
         }
   in map (mapper) (vals)
       
@@ -64,10 +72,10 @@ maybeRecord jsonVal =
     Just jn -> Just (JS.toRecord ( Json.toJSObject jn))
     _ -> Nothing
 
-toJson : Http.Response String -> Maybe a
+toJson : Http.Response String -> Maybe Json.JsonValue
 toJson response =
     case response of
-      Http.Success str -> maybeRecord (Json.fromString str)
+      Http.Success str -> Json.fromString str
       _ -> Nothing
 
 string : Json.JsonValue -> String
