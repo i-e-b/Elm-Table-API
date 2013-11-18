@@ -5,10 +5,6 @@ import Json
 import Dict
 
 
---main = flow down <~ (exampleTable <~ Window.width)
---main = asText <~ ((orEmpty jsonToBatch) <~ dataJson)
---main = asText <~ (orEmpty jsonToBatch <~ dataJson (every (5*second)))
-
 batchFeed = orEmpty jsonToBatch <~ dataJson (every (5*second))
 main = lift2 batchesToElement(batchFeed) (Window.width)
 
@@ -39,17 +35,6 @@ makeRow elements widths =
   let pairs = zip elements widths
   in  map (\(e,w) -> width w e) pairs
 
-
-exampleElements = map (plainText) ["One", "Two", "Three", "Four"]
-exampleWidths w = divisions [0.5, 0.1, 0.2, 0.3] w
-
-exampleRow w =
-  let sizedElements = (makeRow exampleElements) (exampleWidths w)
-  in flow right sizedElements
-
--- this one would be data source -> width -> [Element]
-exampleTable w = [exampleRow w, exampleRow w, exampleRow w, exampleRow w]
-
 -- given a function that builds cells from records, and a list of 
 -- records, build a table
 tabulateRecords : (a -> [Cell]) -> [a] -> Table
@@ -57,7 +42,10 @@ tabulateRecords f recs = map (f) recs
 
 -- todo: proportions and minimum sizes
 buildRow : Int -> [Cell] -> Element
-buildRow width r = flow right (map (\x -> x.content) r)
+buildRow width r = 
+    let rawContent = flow right (map (\x -> x.content) r)
+        rawSizes = divisions (map (\x -> x.proportion) r) width
+    in  makeRow ...
 
 -- Turn table data into a displayable 
 tableElement : Table -> Int -> Element
