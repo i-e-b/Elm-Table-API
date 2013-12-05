@@ -42,10 +42,12 @@ tabulateRecords f recs = map (f) recs
 
 -- todo: proportions and minimum sizes
 buildRow : Int -> [Cell] -> Element
-buildRow width r = 
-    let rawContent = flow right (map (\x -> x.content) r)
-        rawSizes = divisions (map (\x -> x.proportion) r) width
-    in  makeRow ...
+buildRow w r = 
+    let rawContent = map (\x -> x.content) r
+        rawSizes = divisions (map (\x -> x.proportion) r) w
+        resize elem size = width size elem
+    in  flow right (zipWith (resize) (rawContent) (rawSizes))
+
 
 -- Turn table data into a displayable 
 tableElement : Table -> Int -> Element
@@ -57,8 +59,12 @@ tableElement t width =
 
 batchTable : [Batch] -> Table
 batchTable bs =
-    let cl s = {proportion=1.0, minSize=10, content=plainText s}
-        batchRow b = [cl "received date", cl "complete", cl "batchId"]
+    let cl s = {proportion=0.3, minSize=10, content=plainText s}
+        batchRow b =
+            [ {proportion=0.2, minSize=10, content=plainText b.receivedDate}
+            , {proportion=0.1, minSize=10, content=plainText (if b.isCompleted then "X" else " ")}
+            , {proportion=0.7, minSize=10, content=plainText b.batchId}
+            ]
     in  map (batchRow) bs
 
 -- ############# API crap #####################
