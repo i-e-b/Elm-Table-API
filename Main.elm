@@ -3,7 +3,8 @@ import Http
 import JavaScript.Experimental as JS
 import Json
 import Dict
-import TableDrawing as T
+import open TableDrawing
+
 
 main = lift2 batchesToElement(batchFeed) (Window.width)
 batchFeed = orEmpty jsonToBatch <~ dataJson (every (5*second))
@@ -13,10 +14,10 @@ type Batch = {receivedDate:String, isCompleted:Bool, batchId:String}
 
 -- Turn a list of batches and a screen width into a single table element.
 batchesToElement : [Batch] -> Int -> Element
-batchesToElement bs width = T.tableElement (batchTable bs) width
+batchesToElement bs width = tableElement (batchTable bs) width
 
 -- Turn a list of batches into a table
-batchTable : [Batch] -> T.Table
+batchTable : [Batch] -> Table
 batchTable bs =
     let cl s = {proportion=0.3, minSize=10, content=plainText s}
         batchRow b =
