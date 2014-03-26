@@ -3,7 +3,7 @@ import Http
 import JavaScript.Experimental as JS
 import Json
 import Dict
-import open TableDrawing
+import TableDrawing (..)
 
 
 main = lift2 batchesToElement(batchFeed) (Window.width)
